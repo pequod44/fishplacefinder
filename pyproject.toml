@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "diploma"
+version = "0.1.0"
+description = ""
+authors = ["pequod <hounasamin1@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+django = "^5.0.2"
+psycopg2-binary = "^2.9.9"
+django-crispy-forms = "^2.1"
+crispy-bootstrap5 = "^2023.10"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
