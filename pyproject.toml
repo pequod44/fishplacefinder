@@ -11,6 +11,9 @@ django = "^5.0.2"
 psycopg2-binary = "^2.9.9"
 django-crispy-forms = "^2.1"
 crispy-bootstrap5 = "^2023.10"
+folium = "^0.15.1"
+geos = "^0.2.3"
+proj = "^0.2.0"
 
 
 [build-system]

@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.gis',
     'smartfishing',
     'crispy_forms',
     'crispy_bootstrap5'
@@ -83,7 +84,8 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        #'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'webdb',
         'USER': 'postgres',
         'PASSWORD': 'Hounasamin1'
@@ -121,6 +123,8 @@ USE_I18N = True
 
 USE_TZ = True
 
+GDAL_LIBRARY_PATH = r'C:\Program Files\GDAL\gdal.dll'
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
@@ -134,3 +138,4 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static")
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_REDIRECT_URL = '/home'
 LOGOUT_REDIRECT_URL = 'login'
+
