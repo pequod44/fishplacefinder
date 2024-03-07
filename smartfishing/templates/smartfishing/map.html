@@ -1,0 +1,152 @@
+{% extends 'smartfishing/base.html' %}
+{% block title %}Map page{% endblock %}
+{% block content %}
+<!--<h1>Map page!</h1>-->
+
+<!--{{ map|safe }}-->
+<!--<div id="map" style="height: 600px; width: 1200px;"></div>-->
+
+<!--{{ points|json_script:"points_json" }}-->
+
+<!--<script>-->
+<!--    var map = L.map('map').setView([46.347141, 48.026459], 14);-->
+<!--    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {-->
+<!--    maxZoom: 19,-->
+<!--    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'-->
+<!--}).addTo(map);-->
+
+<!--    let points = JSON.parse(document.getElementById('points_json').textContent)-->
+
+<!--    points.forEach(point => {-->
+<!--        var marker = L.marker([point.latitude, point.longitude]).addTo(map)-->
+<!--        marker.bindPopup("<b>Hello world!</b><br>I am a popup.");-->
+
+<!--    })-->
+
+<!--    map.on('click', (event) => {-->
+<!--        console.log(event.latlng)-->
+<!--    })-->
+<!--</script>-->
+
+<div id="map" style="height: 100vh;width: 100vw;overflow: hidden;"></div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var map = L.map('map').setView([46.347141, 48.026459], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors',
+            maxZoom: 18,
+        }).addTo(map);
+
+        fetch('/api/locations/')
+        .then(response => response.json())
+        .then(data => {
+            data.forEach(function(location) {
+                L.marker([location.coordinates[0], location.coordinates[1]])
+                .bindPopup(`<b>${location.name}</b><br>${location.user} <br> ${location.description} <br> <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="offcanvas" data-bs-target="#point-info" aria-controls="offcanvasWithBothOptions">Подробнее</button>`)
+                .addTo(map);
+            });
+        });
+
+        function onMapClick(e) {
+          var popup = L.popup();
+          console.log(e.latlng)
+          let lat = e.latlng.lat;
+          let lng = e.latlng.lng;
+          let coordinates = {lat: lat, lng: lng};
+          $('#coordinates').val(JSON.stringify(coordinates));
+          popup
+              .setLatLng(e.latlng)
+              .setContent('<p>Установить точку здесь?<br/> <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasWithBothOptions" aria-controls="offcanvasWithBothOptions">Добавить точку</button></p>')
+              .openOn(map);
+          }
+          $(document).on('submit', '#post-form', function(e) {
+              e.preventDefault();
+              $.ajax({
+                  type:'POST',
+                  url: 'create-point/',
+                  data:{
+                      name: $('#point_name').val(),
+                      description: $('#description').val(),
+                      type: $('#type').val(),
+                      coordinates: $('#coordinates').val(), // Теперь отправляем строку с координатами
+                      csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val()
+                  }
+              })
+          })
+        map.on('contextmenu click', onMapClick); // Для правой кнопки мыши используйте 'contextmenu', для левой - 'click'
+
+
+        map.on('move start', function() {
+            map.closePopup();
+        });
+
+        // Закрыть всплывающее окно при изменении масштаба карты
+        map.on('zoomstart', function() {
+            map.closePopup();
+        });
+
+
+    });
+
+
+</script>
+
+
+<style>
+    html, body {
+        overflow: hidden; /* Это предотвратит появление полос прокрутки */
+    }
+
+    #map {
+        height: 100%;
+        width: 100vw; /* Это гарантирует, что карта занимает всю ширину вьюпорта */
+        overflow: hidden; /* На всякий случай, чтобы убедиться, что внутри контейнера карты не будет полос прокрутки */
+    }
+
+</style>
+
+
+<form method="post" id="post-form">
+    {% csrf_token %}
+    <div class="offcanvas offcanvas-start" data-bs-scroll="true" tabindex="-1" id="offcanvasWithBothOptions" aria-labelledby="offcanvasWithBothOptionsLabel">
+      <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="offcanvasWithBothOptionsLabel">Информация о точке</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body">
+        <div class="input-group mb-3">
+          <input type="hidden" id="coordinates" name="coordinates" value="">
+          <input type="text" id="point_name" class="form-control" placeholder="Наименование точки" aria-label="Recipient's username" aria-describedby="button-addon2">
+        </div>
+        <div class="input-group mb-3">
+          <input type="text" id="description" class="form-control" placeholder="Описание" aria-label="Recipient's username" aria-describedby="button-addon2">
+        </div>
+        <div class="input-group mb-3">
+          <select class="form-select" id="type">
+            <option value="1">Обычная</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-outline-primary">Сохранить точку</button>
+
+      </div>
+    </div>
+</form>
+
+
+<button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#point-info" aria-controls="offcanvasWithBothOptions">Enable both scrolling & backdrop</button>
+
+<div class="offcanvas offcanvas-start" data-bs-scroll="true" tabindex="-1" id="point-info" aria-labelledby="offcanvasWithBothOptionsLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="point-infoLabel">Backdrop with scrolling</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body">
+    <p>Try scrolling the rest of the page to see this option in action.</p>
+  </div>
+</div>
+
+{% endblock %}
+
+
+
