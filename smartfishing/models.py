@@ -2,6 +2,7 @@ from datetime import datetime
 from django.contrib.auth.models import User
 from django.contrib.gis.db import models as m
 from django.db import models
+from django.contrib.gis.geos import Point as pnt
 
 
 class Point(models.Model):
@@ -10,11 +11,7 @@ class Point(models.Model):
         max_length=30,
         verbose_name="Наименование точки",
     )
-    coordinates = m.PointField(geography=True)
-    # coordinates = models.CharField(
-    #     max_length=50,
-    #     verbose_name="Координаты точки",
-    # )
+    coordinates = m.PointField(geography=True, default=pnt(46.347141, 48.026459))
     description = models.CharField(
         max_length=128,
         verbose_name="Описание точки",

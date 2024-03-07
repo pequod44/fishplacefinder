@@ -17,13 +17,15 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
-from smartfishing.views import home_page, sign_up, map_page
+from smartfishing.views import home_page, sign_up, map_page, locations_json, create_point
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', home_page),
     path('home', home_page),
     path('map', map_page),
+    path('create-point/', create_point),
+    path('api/locations/', locations_json, name='locations_json'),
     path('sign-up', sign_up),
     path('', include('django.contrib.auth.urls'), name='login'),
 ]
