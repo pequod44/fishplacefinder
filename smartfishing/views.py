@@ -9,6 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from .forms import PointForm
 from django.contrib.gis.geos import fromstr
 from django.contrib.gis.geos import Point as pnt
+from django.views.decorators.http import require_http_methods
 
 import folium
 from folium import plugins
@@ -96,21 +97,29 @@ def locations_json(request):
 #             return JsonResponse({'error': 'Ошибка в данных формы.'}, status=400)
 #     return JsonResponse({'error': 'Неверный запрос.'}, status=400)
 
+@require_http_methods(["POST"])
 def create_point(request):
-    if request.method == 'POST':
-        name = request.POST.get('name')
-        coordinates_raw = json.loads(request.POST.get('coordinates'))
-        coordinates = pnt(coordinates_raw['lng'], coordinates_raw['lat'])
-        description = request.POST.get('description')
-        type = request.POST.get('type')
-        user = request.user  # Используйте request.user для получения текущего пользователя
+    name = request.POST.get('name')
+    coordinates_raw = json.loads(request.POST.get('coordinates'))
+    coordinates = pnt(coordinates_raw['lng'], coordinates_raw['lat'])
+    description = request.POST.get('description')
+    type = request.POST.get('type')
+    user = request.user  # Используйте request.user для получения текущего пользователя
 
-        if not user.is_authenticated:
-            return HttpResponse('User is not authenticated', status=401)
+    if not user.is_authenticated:
+        return JsonResponse({'error': 'User is not authenticated'}, status=401)
 
-        new_point = Point(user=user, coordinates=coordinates, name=name, description=description, type=type)
-        new_point.save()
-        return HttpResponse('Point created successfully')
+    new_point = Point(user=user, coordinates=coordinates, name=name, description=description, type=type)
+    new_point.save()
+    response_data = {
+        'name': name,
+        'description': description,
+        'coordinates': coordinates_raw,  # Возвращаем в формате, который был передан
+        'type': type,
+        'user': request.user.username
+    }
+    return JsonResponse(response_data, status=201)  # Возвращает JSON с данными точки и статусом 201 Created
+
 
 
 

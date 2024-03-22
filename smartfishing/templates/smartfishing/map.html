@@ -32,23 +32,40 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        var map = L.map('map').setView([46.347141, 48.026459], 14);
+        let map = L.map('map').setView([46.347141, 48.026459], 14);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors',
             maxZoom: 18,
         }).addTo(map);
 
         fetch('/api/locations/')
-        .then(response => response.json())
-        .then(data => {
+          .then(response => response.json())
+          .then(data => {
             data.forEach(function(location) {
-                L.marker([location.coordinates[0], location.coordinates[1]])
-                .bindPopup(`<b>${location.name}</b><br>${location.user} <br> ${location.description} <br> <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="offcanvas" data-bs-target="#point-info" aria-controls="offcanvasWithBothOptions">Подробнее</button>`)
+              const marker = L.marker([location.coordinates[0], location.coordinates[1]])
                 .addTo(map);
+
+              marker.on('click', function() {
+                // Обновляем содержимое кастомного окна
+                document.getElementById('point-infoLabel').textContent = location.name; // Заголовок кастомного окна
+                document.querySelector('#point-info .offcanvas-body').innerHTML = `
+                  <p>${location.user}</p>
+                  <p>${location.description}</p>
+                  <!-- Вставьте сюда любой дополнительный контент -->
+                `;
+                // Открываем кастомное окно
+                const offcanvas = new bootstrap.Offcanvas(document.getElementById('point-info'));
+                offcanvas.show();
+              });
             });
-        });
+          });
+
+        let tempMarker;
 
         function onMapClick(e) {
+          if (tempMarker) {
+          map.removeLayer(tempMarker);
+          }
           var popup = L.popup();
           console.log(e.latlng)
           let lat = e.latlng.lat;
@@ -57,25 +74,26 @@
           $('#coordinates').val(JSON.stringify(coordinates));
           popup
               .setLatLng(e.latlng)
-              .setContent('<p>Установить точку здесь?<br/> <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasWithBothOptions" aria-controls="offcanvasWithBothOptions">Добавить точку</button></p>')
+              .setContent('<p>Установить точку здесь?<br/> <button id="addPointButton" class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasWithBothOptions" aria-controls="offcanvasWithBothOptions">Добавить точку</button></p>')
               .openOn(map);
           }
-          $(document).on('submit', '#post-form', function(e) {
-              e.preventDefault();
-              $.ajax({
-                  type:'POST',
-                  url: 'create-point/',
-                  data:{
-                      name: $('#point_name').val(),
-                      description: $('#description').val(),
-                      type: $('#type').val(),
-                      coordinates: $('#coordinates').val(), // Теперь отправляем строку с координатами
-                      csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val()
-                  }
-              })
-          })
+
         map.on('contextmenu click', onMapClick); // Для правой кнопки мыши используйте 'contextmenu', для левой - 'click'
 
+        map.on('popupopen', function(e) {
+            $('#addPointButton').on('click', function() {
+                // Закрыть текущий popup
+                map.closePopup();
+                if (tempMarker) {
+                    map.removeLayer(tempMarker);
+                }
+
+                // Создаём новый временный маркер на месте клика
+                tempMarker = L.marker(e.popup.getLatLng()).addTo(map);
+
+            });
+
+        });
 
         map.on('move start', function() {
             map.closePopup();
@@ -85,10 +103,95 @@
         map.on('zoomstart', function() {
             map.closePopup();
         });
+        $(document).on('submit', '#post-form', function(e) {
+          e.preventDefault();
+          $.ajax({
+              type:'POST',
+              url: 'create-point/',
+              data:{
+                  name: $('#point_name').val(),
+                  description: $('#description').val(),
+                  type: $('#type').val(),
+                  coordinates: $('#coordinates').val(), // Теперь отправляем строку с координатами
+                  csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val()
+              },
+              success: function(pointData) {
+                  // Добавляем маркер на карту для только что созданной точки
+                  const marker = L.marker([pointData.coordinates.lat, pointData.coordinates.lng])
+                    .addTo(map);
+
+                  // Назначаем обработчик клика на маркер
+                  marker.on('click', function() {
+                    // Обновляем содержимое кастомного окна
+                    document.getElementById('point-infoLabel').textContent = pointData.name; // Заголовок кастомного окна
+                    document.querySelector('#point-info .offcanvas-body').innerHTML = `
+                      <p>${pointData.user}</p>
+                      <p>${pointData.description}</p>
+                      <!-- Добавьте сюда любой дополнительный контент, например ссылки или изображения -->
+                    `;
+                    // Открываем кастомное окно
+                    const offcanvas = new bootstrap.Offcanvas(document.getElementById('point-info'));
+                    offcanvas.show();
+                  });
+                  let offcanvasAddPoint = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasWithBothOptions'));
+                  if (offcanvasAddPoint) {
+                      offcanvasAddPoint.hide();
+                  }
+                  $('#post-form').trigger('reset'); // Эффективнее очищает все поля формы
+
+                  // Имитируем клик по маркеру, чтобы открыть offcanvas с информацией о точке сразу
+                  marker.fire('click');
+
+              }
+
+          })
+        })
+        const offcanvasElement = document.getElementById('offcanvasWithBothOptions');
+
+        offcanvasElement.addEventListener('hide.bs.offcanvas', function () {
+          if (tempMarker) {
+            map.removeLayer(tempMarker);
+            tempMarker = null; // Обнуляем переменную, чтобы избежать попыток удаления уже несуществующего маркера
+          }
+        });
 
 
     });
 
+
+<!--    $(document).on('submit', '#post-form', function(e) {-->
+<!--      e.preventDefault();-->
+<!--      $.ajax({-->
+<!--          type:'POST',-->
+<!--          url: 'create-point/',-->
+<!--          data:{-->
+<!--              name: $('#point_name').val(),-->
+<!--              description: $('#description').val(),-->
+<!--              type: $('#type').val(),-->
+<!--              coordinates: $('#coordinates').val(), // Теперь отправляем строку с координатами-->
+<!--              csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val()-->
+<!--          },-->
+<!--          success: function(response) {-->
+<!--              // Теперь `response` уже является объектом, поэтому никакого парсинга не требуется-->
+<!--              const coords = response.coordinates;-->
+
+<!--              // Добавляем маркер на карту-->
+<!--              L.marker([coords.lat, coords.lng]).addTo(map)-->
+<!--                .bindPopup(`<b>${response.name}</b><br>${response.description}`);-->
+
+<!--              // Закрываем форму добавления и очищаем поля-->
+<!--              const offcanvasAddPoint = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasWithBothOptions'));-->
+<!--              offcanvasAddPoint.hide();-->
+<!--              $('#post-form').find('input[type=text], input[type=hidden], select').val('');-->
+
+<!--              // Открываем форму информации о точке-->
+<!--              const offcanvasInfo = new bootstrap.Offcanvas(document.getElementById('point-info'));-->
+<!--              $('#point-infoLabel').text(response.name); // Заголовок с именем точки-->
+<!--              $('.offcanvas-body', '#point-info').html(`<p>${response.description}</p>`); // Описание-->
+<!--              offcanvasInfo.show();-->
+<!--          }-->
+<!--      })-->
+<!--    })-->
 
 </script>
 
@@ -136,7 +239,7 @@
 
 <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#point-info" aria-controls="offcanvasWithBothOptions">Enable both scrolling & backdrop</button>
 
-<div class="offcanvas offcanvas-start" data-bs-scroll="true" tabindex="-1" id="point-info" aria-labelledby="offcanvasWithBothOptionsLabel">
+<div class="offcanvas offcanvas-start" data-bs-scroll="true" tabindex="-1" id="point-info" aria-labelledby="offcanvasWithBothOptionsLabel" data-bs-backdrop="false">
   <div class="offcanvas-header">
     <h5 class="offcanvas-title" id="point-infoLabel">Backdrop with scrolling</h5>
     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
