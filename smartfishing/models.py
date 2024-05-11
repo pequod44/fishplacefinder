@@ -43,9 +43,7 @@ class Comment(models.Model):
 
 class Photo(models.Model):
     point = models.ForeignKey(Point, on_delete=models.CASCADE)
-    url = models.URLField(
-        verbose_name="Фото",
-    )
+    image = models.ImageField(null=False, blank=False, upload_to='photos/')
 
 
 class Equipment(models.Model):

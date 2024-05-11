@@ -16,6 +16,8 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 
 from smartfishing.views import home_page, sign_up, map_page, locations_json, create_point
 
@@ -28,4 +30,4 @@ urlpatterns = [
     path('api/locations/', locations_json, name='locations_json'),
     path('sign-up', sign_up),
     path('', include('django.contrib.auth.urls'), name='login'),
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
